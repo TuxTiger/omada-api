@@ -7,8 +7,10 @@ FIELDDEF = collections.OrderedDict([
 	('name',        ('USERNAME',     20)),
 	('ip',          ('IP ADDRESS',   16)),
 	('active',      ('STATUS',       12)),
-	('networkName', ('SSID/NETWORK', 16)),
-	('port',        ('AP/PORT',      16)),
+	('networkName', ('SSID/NETWORK', 22)),
+	('rssi',        ('RSSI',          5)),
+	('wifiMode',    ('WIFIMODE',      3)),
+	('port',        ('AP/PORT',      26)),
 	('activity',    ('ACTIVITY',     12)),
 	('trafficDown', ('DOWNLOAD',     10)),
 	('trafficUp',   ('UPLOAD',       10)),
@@ -56,6 +58,8 @@ def print_header():
 def print_client( client ):
 
 	for key in client:
+		# sys.stdout.write( key );
+		# sys.stdout.write( ' ' );
 
 		if key == 'active':
 			client[key] = format_status( client['active'] )
