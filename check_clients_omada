@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+use strict;
+use English;
+use Net::Telnet;
+use lib  "/usr/lib/nagios/plugins" ;
+use utils qw(%ERRORS &print_revision &support &usage );
+use DBI;
+use Data::Dumper;
+
+my $timeout = 5;
+my $ap = @ARGV[0];
+my $line;
+my $username = 'admin';
+my $passwd = 'arIL3XzQis';
+my $DATABASEHOST = '192.168.1.6';
+my $DATABASENAAM = 'wifi';
+my $DATABASEGEBRUIKER = 'wifi';
+my $DATABASEWACHTWOORD = '1Hhbh0';
+my %aps = ("Room 407 - Balcony" => '10.0.0.59');
+my %essid = ("Holland House Hotel" => 1, "HHBH-VPN" => 2);
+my %frequency = (4 => "2.4G", 5 => "5G", 6 => "wifi6", 7 => "wifi7");
+
+my $dbh = openDatabase();
+my $sth = $dbh->prepare('INSERT INTO ap_stats (essid, access_id, ap_ip, frequency, rssi, send, received, rate) VALUES (?, (SELECT id FROM access WHERE mac = ? AND deleted IS NULL), ?, ?, ?, ?, ?, ?)');
+
+my $result = `python3 /home/danny/omada-api/clients-raw.py 2>/dev/null`;
+
+my @lines = split /\n/, $result;
+my $counter = -1;
+foreach my $line (@lines) {
+	$counter++;
+	next if ($counter == 0);
+	# 'mac|ip|active|networkName|rssi|wifiMode|port|activity|trafficDown|trafficUp|uptime|'
+	#  0   1    2       3         4      5      6    7          8          9        10
+	# '6A:EA:B5:2D:7F:ED|10.0.200.9|CONNECTED|Holland House Hotel|-77|6|Room 407 - Balcony|0.0 KB/s|145319202|11387384|53:52|';
+	my @values = split('\|', $line);
+	next if ($values[1] eq '--');
+	$sth->execute($essid{$values[3]}, lc($values[0]), $aps{$values[6]}, $frequency{$values[5]}, $values[4], $values[9], $values[8], $values[7]);
+}
+sluitDatabase($dbh);
+
+sub openDatabase {
+	my $dbh = DBI->connect("dbi:mysql:hostname=$DATABASEHOST;dbname=$DATABASENAAM", $DATABASEGEBRUIKER, $DATABASEWACHTWOORD) or die($DBI::errstr);
+	$dbh->{'mysql_auto_reconnect'} = 1;
+	return ($dbh);
+}
+
+sub sluitDatabase {
+	my $dbh = shift;
+	$dbh->disconnect() or die($dbh->errstr());
+}
